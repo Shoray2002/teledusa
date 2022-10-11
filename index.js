@@ -1,5 +1,9 @@
-const TelegramBot = require("node-telegram-bot-api");
+const MEDUSA_BACKEND_URL = "http://localhost:9000";
 const token = "5741674219:AAH-85e9p5eVgI-5HoYQ2I8UIFHrQTmmKN4";
+
+const TelegramBot = require("node-telegram-bot-api");
+const Medusa = require("@medusajs/medusa-js");
+// const medusa = new Medusa({ baseUrl: MEDUSA_BACKEND_URL, maxRetries: 3 });
 
 const bot = new TelegramBot(token, { polling: true });
 bot.on("message", (msg) => {
@@ -49,20 +53,13 @@ function validateEmail(email) {
 }
 
 function validateFromMedusa(email, password) {
-  console.log("logged in");
-  // var request = require("request");
-  // var options = {
-  //   method: "POST",
-  //   url: "https://medusa.com/api/auth/login",
-  //   headers: {
-  //     "Content-Type": "application/json",
-  //   },
-  //   body: { email: email, password: password },
-  //   json: true,
-  // };
-
-  // request(options, function (error, response, body) {
-  //   if (error) throw new Error(error);
-  //   console.log(body);
-  // });
+  console.log("logging in...");
+  // medusa.admin.auth
+  //   .createSession({
+  //     email: email,
+  //     password: password,
+  //   })
+  //   .then(({ user }) => {
+  //     console.log(user.id);
+  //   });
 }
