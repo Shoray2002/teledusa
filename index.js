@@ -7,6 +7,8 @@ const medusa = new Medusa.default({
   baseUrl: MEDUSA_BACKEND_URL,
   maxRetries: 1,
 });
+console.log(medusa.admin.auth);
+console.log("-----------------------------");
 
 const bot = new TelegramBot(token, { polling: true });
 bot.on("message", (msg) => {
@@ -19,7 +21,7 @@ bot.onText(/\/start/, (msg) => {
   bot.sendMessage(msg.chat.id, "<b>Placeholder</b>", {
     parse_mode: "HTML",
     reply_markup: {
-      keyboard: [["/auth"], ["/logout"]],
+      keyboard: [["/auth admin@medusa-test.com supersecret"], ["/logout"]],
     },
   });
 });
@@ -32,18 +34,32 @@ bot.onText(/\/auth (.+)/, (msg, match) => {
   if (!/\S+@\S+\.\S+/.test(email)) {
     bot.sendMessage(chatId, "Invalid email");
   } else {
-    validateFromMedusa(email, password);
-    bot.sendMessage(chatId, "Logged in");
+    medusa.admin.auth
+      .createSession({
+        email: email,
+        password: password,
+      })
+      .then(({ user }) => {
+        console.log(user);
+        bot.sendMessage(chatId, "Logged in as " + user.id);
+      })
+      .catch((err) => {
+        bot.sendMessage(chatId, "Invalid credentials");
+      });
   }
 });
 
 bot.onText(/\/logout/, (msg) => {
-  try {
-    logout();
-    bot.sendMessage(msg.chat.id, "Logged out");
-  } catch (error) {
-    bot.sendMessage(msg.chat.id, "Error logging out");
-  }
+  medusa.admin.auth
+    .deleteSession()
+    .then(() => {
+      console.log("Logged out");
+      bot.sendMessage(msg.chat.id, "Logged out");
+    })
+    .catch((error) => {
+      console.log("Error logging out");
+      bot.sendMessage(msg.chat.id, "Error logging out");
+    });
 });
 
 bot.onText(/\/help/, (msg) => {
@@ -51,26 +67,3 @@ bot.onText(/\/help/, (msg) => {
     parse_mode: "HTML",
   });
 });
-
-function validateFromMedusa(email, password) {
-  console.log("logging in...");
-  medusa.admin.auth
-    .createSession({
-      email: email,
-      password: password,
-    })
-    .then(({ user }) => {
-      console.log(user.id);
-    });
-}
-
-function logout() {
-  medusa.admin.auth
-    .deleteSession()
-    .then(() => {
-      console.log("Logged out");
-    })
-    .catch((error) => {
-      console.log("Error logging out");
-    });
-}
