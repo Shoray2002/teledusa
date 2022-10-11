@@ -3,7 +3,10 @@ const token = "5741674219:AAH-85e9p5eVgI-5HoYQ2I8UIFHrQTmmKN4";
 
 const TelegramBot = require("node-telegram-bot-api");
 const Medusa = require("@medusajs/medusa-js");
-// const medusa = new Medusa({ baseUrl: MEDUSA_BACKEND_URL, maxRetries: 3 });
+const medusa = new Medusa.default({
+  baseUrl: MEDUSA_BACKEND_URL,
+  maxRetries: 1,
+});
 
 const bot = new TelegramBot(token, { polling: true });
 bot.on("message", (msg) => {
@@ -12,7 +15,6 @@ bot.on("message", (msg) => {
     bot.sendMessage(msg.chat.id, "Hello dear user");
   }
 });
-
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(msg.chat.id, "<b>Placeholder</b>", {
     parse_mode: "HTML",
@@ -27,7 +29,7 @@ bot.onText(/\/auth (.+)/, (msg, match) => {
   const ref = match[1].split(" ");
   const email = ref[0];
   const password = ref[1];
-  if (!validateEmail(email)) {
+  if (!/\S+@\S+\.\S+/.test(email)) {
     bot.sendMessage(chatId, "Invalid email");
   } else {
     validateFromMedusa(email, password);
@@ -36,9 +38,12 @@ bot.onText(/\/auth (.+)/, (msg, match) => {
 });
 
 bot.onText(/\/logout/, (msg) => {
-  bot.sendMessage(msg.chat.id, "You are logged out", {
-    parse_mode: "HTML",
-  });
+  try {
+    logout();
+    bot.sendMessage(msg.chat.id, "Logged out");
+  } catch (error) {
+    bot.sendMessage(msg.chat.id, "Error logging out");
+  }
 });
 
 bot.onText(/\/help/, (msg) => {
@@ -47,19 +52,25 @@ bot.onText(/\/help/, (msg) => {
   });
 });
 
-function validateEmail(email) {
-  var re = /\S+@\S+\.\S+/;
-  return re.test(email);
-}
-
 function validateFromMedusa(email, password) {
   console.log("logging in...");
-  // medusa.admin.auth
-  //   .createSession({
-  //     email: email,
-  //     password: password,
-  //   })
-  //   .then(({ user }) => {
-  //     console.log(user.id);
-  //   });
+  medusa.admin.auth
+    .createSession({
+      email: email,
+      password: password,
+    })
+    .then(({ user }) => {
+      console.log(user.id);
+    });
+}
+
+function logout() {
+  medusa.admin.auth
+    .deleteSession()
+    .then(() => {
+      console.log("Logged out");
+    })
+    .catch((error) => {
+      console.log("Error logging out");
+    });
 }
