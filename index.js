@@ -1,69 +1,87 @@
-const MEDUSA_BACKEND_URL = "http://localhost:9000";
-const token = "5741674219:AAH-85e9p5eVgI-5HoYQ2I8UIFHrQTmmKN4";
+import { Telegraf } from "telegraf";
+import Medusa from "@medusajs/medusa-js";
+import { telegram, medusa, supabase } from "./config.js";
+import { createClient } from "@supabase/supabase-js";
 
-const TelegramBot = require("node-telegram-bot-api");
-const Medusa = require("@medusajs/medusa-js");
-const medusa = new Medusa.default({
-  baseUrl: MEDUSA_BACKEND_URL,
-  maxRetries: 1,
-});
-console.log(medusa.admin.auth);
-console.log("-----------------------------");
+const db_user = createClient(supabase.url, supabase.key);
 
-const bot = new TelegramBot(token, { polling: true });
-bot.on("message", (msg) => {
-  var Hi = "hi";
-  if (msg.text.toString().toLowerCase().indexOf(Hi) === 0) {
-    bot.sendMessage(msg.chat.id, "Hello dear user");
-  }
+const medusa_instance = new Medusa.default({
+  baseUrl: medusa.baseUrl,
+  maxRetries: medusa.maxRetries,
 });
-bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id, "<b>Placeholder</b>", {
-    parse_mode: "HTML",
-    reply_markup: {
-      keyboard: [["/auth admin@medusa-test.com supersecret"], ["/logout"]],
-    },
+const bot = new Telegraf(telegram.token);
+const auth_obj = {
+  email: "",
+  password: "",
+};
+// start
+bot.command("start", (ctx) => {
+  bot.telegram.sendMessage(
+    ctx.chat.id,
+    "Hello there! Welcome to Teledusa.",
+    {}
+  );
+});
+
+// auth command
+bot.command("auth", (ctx) => {
+  console.log(ctx.message.text);
+  const split_message = ctx.message.text.split(" ");
+  auth_obj.email = split_message[1];
+  auth_obj.password = split_message[2];
+  console.log(auth_obj);
+  medusa_instance.admin.auth.createSession(auth_obj).then(async (res) => {
+    console.log(res.user.id);
+    console.log(
+      res.response.headers["set-cookie"][0]
+        .split(";")[0]
+        .split("connect.sid=")[1]
+    );
+    const { data, error } = await db_user
+      .from("users")
+      .select("*")
+      .eq("user_id", res.user.id);
+    if (data.length > 0) {
+      console.log("user already exists");
+      await db_user
+        .from("users")
+        .update({
+          cookie: res.response.headers["set-cookie"][0]
+            .split(";")[0]
+            .split("connect.sid=")[1],
+        })
+        .eq("user_id", res.user.id);
+    } else {
+      console.log("user does not exist");
+      await db_user.from("users").insert(
+        [
+          {
+            user_id: res.user.id,
+            cookie: res.response.headers["set-cookie"][0]
+              .split(";")[0]
+              .split("connect.sid=")[1],
+          },
+        ],
+        { returning: "minimal" }
+      );
+    }
+    bot.telegram.sendMessage(
+      ctx.chat.id,
+      `You are now logged in as Admin ${res.user.name ? res.user.name : ""}`,
+      {}
+    );
   });
 });
 
-bot.onText(/\/auth (.+)/, (msg, match) => {
-  const chatId = msg.chat.id;
-  const ref = match[1].split(" ");
-  const email = ref[0];
-  const password = ref[1];
-  if (!/\S+@\S+\.\S+/.test(email)) {
-    bot.sendMessage(chatId, "Invalid email");
-  } else {
-    medusa.admin.auth
-      .createSession({
-        email: email,
-        password: password,
-      })
-      .then(({ user }) => {
-        console.log(user);
-        bot.sendMessage(chatId, "Logged in as " + user.id);
-      })
-      .catch((err) => {
-        bot.sendMessage(chatId, "Invalid credentials");
-      });
-  }
-});
-
-bot.onText(/\/logout/, (msg) => {
-  medusa.admin.auth
-    .deleteSession()
-    .then(() => {
-      console.log("Logged out");
-      bot.sendMessage(msg.chat.id, "Logged out");
-    })
-    .catch((error) => {
-      console.log("Error logging out");
-      bot.sendMessage(msg.chat.id, "Error logging out");
-    });
-});
-
-bot.onText(/\/help/, (msg) => {
-  bot.sendMessage(msg.chat.id, "Help", {
-    parse_mode: "HTML",
+bot.command("logout", (ctx) => {
+  medusa_instance.admin.auth.deleteSession().then((res) => {
+    console.log(res);
   });
+  bot.telegram.sendMessage(ctx.chat.id, "Logged Out", {});
 });
+
+bot.launch();
+
+// Enable graceful stop
+process.once("SIGINT", () => bot.stop("SIGINT"));
+process.once("SIGTERM", () => bot.stop("SIGTERM"));
