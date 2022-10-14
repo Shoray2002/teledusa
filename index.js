@@ -25,13 +25,14 @@ bot.command("start", (ctx) => {
 
 // auth command
 bot.command("auth", (ctx) => {
+  console.log(ctx.from.username);
   console.log(ctx.message.text);
   const split_message = ctx.message.text.split(" ");
   auth_obj.email = split_message[1];
   auth_obj.password = split_message[2];
   console.log(auth_obj);
   medusa_instance.admin.auth.createSession(auth_obj).then(async (res) => {
-    console.log(res.user.id);
+    console.log(ctx.from.username);
     console.log(
       res.response.headers["set-cookie"][0]
         .split(";")[0]
@@ -40,7 +41,7 @@ bot.command("auth", (ctx) => {
     const { data, error } = await db_user
       .from("users")
       .select("*")
-      .eq("user_id", res.user.id);
+      .eq("user_id", ctx.from.username);
     if (data.length > 0) {
       console.log("user already exists");
       await db_user
@@ -50,13 +51,13 @@ bot.command("auth", (ctx) => {
             .split(";")[0]
             .split("connect.sid=")[1],
         })
-        .eq("user_id", res.user.id);
+        .eq("user_id", ctx.from.username);
     } else {
       console.log("user does not exist");
       await db_user.from("users").insert(
         [
           {
-            user_id: res.user.id,
+            user_id: ctx.from.username,
             cookie: res.response.headers["set-cookie"][0]
               .split(";")[0]
               .split("connect.sid=")[1],
@@ -73,11 +74,25 @@ bot.command("auth", (ctx) => {
   });
 });
 
-bot.command("logout", (ctx) => {
-  medusa_instance.admin.auth.deleteSession().then((res) => {
-    console.log(res);
-  });
-  bot.telegram.sendMessage(ctx.chat.id, "Logged Out", {});
+bot.command("logout", async (ctx) => {
+  const { data, error } = await db_user
+    .from("users")
+    .select("*")
+    .eq("user_id", ctx.from.username);
+  if (data.length > 0) {
+    let axiosCfg = {
+      headers: {
+        Cookie: `connect.sid=${data[0].cookie}`,
+      },
+    };
+    bot.telegram.sendMessage(ctx.chat.id, "Logged Out", {});
+  } else {
+    bot.telegram.sendMessage(
+      ctx.chat.id,
+      "Cannot Logout because you are not logged in",
+      {}
+    );
+  }
 });
 
 bot.launch();
