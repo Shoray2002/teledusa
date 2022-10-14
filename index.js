@@ -2,7 +2,7 @@ import { Telegraf } from "telegraf";
 import Medusa from "@medusajs/medusa-js";
 import { telegram, medusa, supabase } from "./config.js";
 import { createClient } from "@supabase/supabase-js";
-
+import axios from "axios";
 const db_user = createClient(supabase.url, supabase.key);
 
 const medusa_instance = new Medusa.default({
@@ -85,7 +85,19 @@ bot.command("logout", async (ctx) => {
         Cookie: `connect.sid=${data[0].cookie}`,
       },
     };
-    bot.telegram.sendMessage(ctx.chat.id, "Logged Out", {});
+    axios
+      .delete(`${medusa.baseUrl}/admin/auth`, axiosCfg)
+      .then((res) => {
+        console.log(res);
+        bot.telegram.sendMessage(
+          ctx.chat.id,
+          `You are now logged out as Admin`,
+          {}
+        );
+      })
+      .catch((err) => {
+        console.log(err);
+      });
   } else {
     bot.telegram.sendMessage(
       ctx.chat.id,
