@@ -25,25 +25,16 @@ bot.command("start", (ctx) => {
 
 // auth command
 bot.command("auth", (ctx) => {
-  console.log(ctx.from.username);
-  console.log(ctx.message.text);
   const split_message = ctx.message.text.split(" ");
   auth_obj.email = split_message[1];
   auth_obj.password = split_message[2];
-  console.log(auth_obj);
   medusa_instance.admin.auth.createSession(auth_obj).then(async (res) => {
-    console.log(ctx.from.username);
-    console.log(
-      res.response.headers["set-cookie"][0]
-        .split(";")[0]
-        .split("connect.sid=")[1]
-    );
     const { data, error } = await db_user
       .from("users")
       .select("*")
-      .eq("user_id", ctx.from.username);
+      .eq("user_id", ctx.from.id);
     if (data.length > 0) {
-      console.log("user already exists");
+      console.log("User already exists");
       await db_user
         .from("users")
         .update({
@@ -51,13 +42,13 @@ bot.command("auth", (ctx) => {
             .split(";")[0]
             .split("connect.sid=")[1],
         })
-        .eq("user_id", ctx.from.username);
+        .eq("user_id", ctx.from.id);
     } else {
-      console.log("user does not exist");
+      console.log("Creating new user");
       await db_user.from("users").insert(
         [
           {
-            user_id: ctx.from.username,
+            user_id: ctx.from.id,
             cookie: res.response.headers["set-cookie"][0]
               .split(";")[0]
               .split("connect.sid=")[1],
@@ -78,7 +69,7 @@ bot.command("logout", async (ctx) => {
   const { data, error } = await db_user
     .from("users")
     .select("*")
-    .eq("user_id", ctx.from.username);
+    .eq("user_id", ctx.from.id);
   if (data.length > 0) {
     let axiosCfg = {
       headers: {
@@ -97,6 +88,11 @@ bot.command("logout", async (ctx) => {
       })
       .catch((err) => {
         console.log(err);
+        bot.telegram.sendMessage(
+          ctx.chat.id,
+          `There was an error logging you out`,
+          {}
+        );
       });
   } else {
     bot.telegram.sendMessage(
