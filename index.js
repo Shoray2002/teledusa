@@ -1,80 +1,77 @@
-import { Telegraf } from "telegraf";
+import TelegramBot from "node-telegram-bot-api";
 import Medusa from "@medusajs/medusa-js";
 import { telegram, medusa, supabase } from "./config.js";
 import { createClient } from "@supabase/supabase-js";
 import axios from "axios";
+
 const db_user = createClient(supabase.url, supabase.key);
 
 const medusa_instance = new Medusa.default({
   baseUrl: medusa.baseUrl,
   maxRetries: medusa.maxRetries,
 });
-const bot = new Telegraf(telegram.token);
+
+const bot = new TelegramBot(telegram.token, { polling: true });
+
 const auth_obj = {
   email: "",
   password: "",
 };
 
-// latency command
-
 // start command
-bot.command("start", (ctx) => {
-  bot.telegram.sendMessage(
-    ctx.chat.id,
-    "Hello there! Welcome to Teledusa.",
-    {}
-  );
+bot.onText(/\/start/, (msg) => {
+  bot.sendMessage(msg.chat.id, "Hello there! Welcome to Teledusa.");
 });
 
 // auth command
-bot.command("auth", (ctx) => {
-  const split_message = ctx.message.text.split(" ");
+bot.onText(/\/auth/, (msg) => {
+  const split_message = msg.text.split(" ");
   auth_obj.email = split_message[1];
   auth_obj.password = split_message[2];
-  medusa_instance.admin.auth.createSession(auth_obj).then(async (res) => {
-    console.log(res.user);
-    const { data, error } = await db_user
-      .from("users")
-      .select("*")
-      .eq("user_id", ctx.from.id);
-    if (data.length > 0) {
-      console.log("User already exists");
-      await db_user
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(auth_obj.email)) {
+    medusa_instance.admin.auth.createSession(auth_obj).then(async (res) => {
+      const { data, error } = await db_user
         .from("users")
-        .update({
-          cookie: res.response.headers["set-cookie"][0]
-            .split(";")[0]
-            .split("connect.sid=")[1],
-        })
-        .eq("user_id", ctx.from.id);
-    } else {
-      console.log("Creating new user");
-      await db_user.from("users").insert(
-        [
+        .select("*")
+        .eq("user_id", msg.from.id);
+
+      if (data.length > 0) {
+        console.log("User already exists");
+        await db_user
+          .from("users")
+          .update({
+            cookie: res.response.headers["set-cookie"][0]
+              .split(";")[0]
+              .split("connect.sid=")[1],
+          })
+          .eq("user_id", msg.from.id);
+      } else {
+        console.log("Creating new user");
+        await db_user.from("users").insert([
           {
-            user_id: ctx.from.id,
+            user_id: msg.from.id,
             cookie: res.response.headers["set-cookie"][0]
               .split(";")[0]
               .split("connect.sid=")[1],
           },
-        ],
-        { returning: "minimal" }
+        ]);
+      }
+      bot.sendMessage(
+        msg.chat.id,
+        `You have been authenticated as ${res.user.id}`
       );
-    }
-    bot.telegram.sendMessage(
-      ctx.chat.id,
-      `You are now logged in as Admin ${res.user.name ? res.user.name : ""}`,
-      {}
-    );
-  });
+    });
+  } else {
+    bot.sendMessage(msg.chat.id, `Please enter a valid email address`);
+  }
 });
 
 // logout command
-bot.command("logout", async (ctx) => {
+bot.onText(/\/logout/, async (msg) => {
   const { data, error } = await db_user
     .from("users")
     .select("*")
-    .eq("user_id", ctx.from.id);
+    .eq("user_id", msg.from.id);
   if (data.length > 0) {
     let axiosCfg = {
       headers: {
@@ -84,35 +81,23 @@ bot.command("logout", async (ctx) => {
     axios
       .delete(`${medusa.baseUrl}/admin/auth`, axiosCfg)
       .then((res) => {
-        bot.telegram.sendMessage(
-          ctx.chat.id,
-          `You are now logged out as Admin`,
-          {}
-        );
+        bot.sendMessage(msg.chat.id, `You have been logged out!`);
       })
       .catch((err) => {
         console.log(err);
-        bot.telegram.sendMessage(
-          ctx.chat.id,
-          `There was an error logging you out`,
-          {}
-        );
+        bot.sendMessage(msg.chat.id, "There was an error logging you out.");
       });
   } else {
-    bot.telegram.sendMessage(
-      ctx.chat.id,
-      "Cannot Logout because you are not logged in",
-      {}
-    );
+    bot.sendMessage(msg.chat.id, "You are not logged in!");
   }
 });
 
-// get admin info command
-bot.command("admin", async (ctx) => {
+// user command
+bot.onText(/\/user/, async (msg) => {
   const { data, error } = await db_user
     .from("users")
     .select("*")
-    .eq("user_id", ctx.from.id);
+    .eq("user_id", msg.from.id);
   if (data.length > 0) {
     let axiosCfg = {
       headers: {
@@ -122,34 +107,13 @@ bot.command("admin", async (ctx) => {
     axios
       .get(`${medusa.baseUrl}/admin/auth`, axiosCfg)
       .then((res) => {
-        console.log(res.data.user);
-        bot.telegram.sendMessage(
-          ctx.chat.id,
-          `You are logged in as Admin ${
-            res.data.user.name ? res.data.user.name : ""
-          }`,
-          {}
-        );
+        bot.sendMessage(msg.chat.id, JSON.stringify(res.data));
       })
       .catch((err) => {
         console.log(err);
-        bot.telegram.sendMessage(
-          ctx.chat.id,
-          `There was an error getting your admin info`,
-          {}
-        );
+        bot.sendMessage(msg.chat.id, "There was an error getting user info.");
       });
   } else {
-    bot.telegram.sendMessage(
-      ctx.chat.id,
-      "Cannot get admin info because you are not logged in",
-      {}
-    );
+    bot.sendMessage(msg.chat.id, "You are not logged in!");
   }
 });
-
-bot.launch();
-
-// Enable graceful stop
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
