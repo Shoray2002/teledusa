@@ -179,7 +179,7 @@ bot.on("callback_query", function (msg) {
       bot.sendMessage(msg.from.id, "Managing Orders: ", {
         reply_markup: JSON.stringify({
           inline_keyboard: [
-            [{ text: "Get a Order", callback_data: "get_orders" }],
+            [{ text: "Get a Order", callback_data: "get_order" }],
             [{ text: "List Orders", callback_data: "list_orders" }],
           ],
         }),
@@ -188,20 +188,16 @@ bot.on("callback_query", function (msg) {
     case "users":
       bot.sendMessage(msg.from.id, "Users");
       break;
+
     case "list_products":
       listProducts(msg);
       break;
-
     case "list_variants":
       listVariants(msg);
       break;
-
     case "get_product":
       getProduct(msg);
       break;
-    // case "delete_product":
-    //   deleteProduct(msg);
-    //   break;
 
     case "list_orders":
       listOrders(msg);
@@ -211,6 +207,7 @@ bot.on("callback_query", function (msg) {
       break;
   }
 });
+// Product Functions
 
 // list products
 async function listProducts(msg) {
@@ -255,49 +252,6 @@ async function listProducts(msg) {
         console.log(err);
         bot.sendMessage(msg.from.id, "You are not logged in!");
       });
-  } else {
-    bot.sendMessage(msg.from.id, "You are not logged in!");
-  }
-}
-
-// get product
-async function getProduct(msg) {
-  const { data, error } = await db_user
-    .from("users")
-    .select("*")
-    .eq("user_id", msg.from.id);
-  if (data.length > 0) {
-    let axiosCfg = {
-      headers: {
-        Cookie: `connect.sid=${data[0].cookie}`,
-      },
-    };
-    bot.sendMessage(msg.from.id, "Please enter the product ID");
-    bot.on("message", async (msg) => {
-      axios
-        .get(`${medusa.baseUrl}/admin/products/${msg.text}`, axiosCfg)
-        .then((res) => {
-          if (res.data.product) {
-            const product = res.data.product;
-            curr_prod_id = product.id;
-            let productText = `<b>Title</b>: ${product.title}\n<b>Product ID</b>: ${product.id}\n<b>Description</b>: ${product.description}\n<b>Thumbnail: </b> ${product.thumbnail} \n\n`;
-            bot.sendMessage(msg.from.id, productText, {
-              parse_mode: "HTML",
-              reply_markup: JSON.stringify({
-                inline_keyboard: [
-                  [{ text: "Update Product", callback_data: "update_product" }],
-                  [{ text: "Delete Product", callback_data: "delete_product" }],
-                  [{ text: "List Variants", callback_data: "list_variants" }],
-                ],
-              }),
-            });
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-          bot.sendMessage(msg.from.id, "Invalid Product Id!");
-        });
-    });
   } else {
     bot.sendMessage(msg.from.id, "You are not logged in!");
   }
@@ -351,6 +305,51 @@ async function listVariants(msg) {
     bot.sendMessage(msg.from.id, "You are not logged in!");
   }
 }
+
+// get product
+async function getProduct(msg) {
+  const { data, error } = await db_user
+    .from("users")
+    .select("*")
+    .eq("user_id", msg.from.id);
+  if (data.length > 0) {
+    let axiosCfg = {
+      headers: {
+        Cookie: `connect.sid=${data[0].cookie}`,
+      },
+    };
+    bot.sendMessage(msg.from.id, "Please enter the product ID");
+    bot.on("message", async (msg) => {
+      axios
+        .get(`${medusa.baseUrl}/admin/products/${msg.text}`, axiosCfg)
+        .then((res) => {
+          if (res.data.product) {
+            const product = res.data.product;
+            curr_prod_id = product.id;
+            let productText = `<b>Title</b>: ${product.title}\n<b>Product ID</b>: ${product.id}\n<b>Description</b>: ${product.description}\n<b>Thumbnail: </b> ${product.thumbnail} \n\n`;
+            bot.sendMessage(msg.from.id, productText, {
+              parse_mode: "HTML",
+              reply_markup: JSON.stringify({
+                inline_keyboard: [
+                  [{ text: "Update Product", callback_data: "update_product" }],
+                  [{ text: "Delete Product", callback_data: "delete_product" }],
+                  [{ text: "List Variants", callback_data: "list_variants" }],
+                ],
+              }),
+            });
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          bot.sendMessage(msg.from.id, "Invalid Product Id!");
+        });
+    });
+  } else {
+    bot.sendMessage(msg.from.id, "You are not logged in!");
+  }
+}
+
+// Order Functions
 
 // list orders
 async function listOrders(msg) {
@@ -435,17 +434,15 @@ async function getOrder(msg) {
               order.shipping_address.last_name
             }, ${order.shipping_address.address_1}, ${
               order.shipping_address.address_2
-            } , ${
+            }, ${
               order.shipping_address.city
             }, ${order.shipping_address.country_code.toUpperCase()}, ${
               order.shipping_address.postal_code
             }\n<b>Payment Status</b>: ${
               order.payment_status
-            }\n<b>Shipping Status</b>: ${
-              order.status
-            }\n<b>Items</b>: \n<b>Total</b>: ${
+            }\n<b>Shipping Status</b>: ${order.status}\n<b>Total</b>: ${
               order.total / 100
-            } ${order.currency_code.toUpperCase()}\n`;
+            } ${order.currency_code.toUpperCase()}\n<b>Items</b>: \n`;
             order.items.forEach((item) => {
               orderText += `${item.title} - ${item.variant.title} - ${
                 item.quantity
@@ -476,3 +473,5 @@ async function getOrder(msg) {
     bot.sendMessage(msg.from.id, "You are not logged in!");
   }
 }
+
+
