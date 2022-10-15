@@ -14,7 +14,10 @@ const auth_obj = {
   email: "",
   password: "",
 };
-// start
+
+// latency command
+
+// start command
 bot.command("start", (ctx) => {
   bot.telegram.sendMessage(
     ctx.chat.id,
@@ -29,6 +32,7 @@ bot.command("auth", (ctx) => {
   auth_obj.email = split_message[1];
   auth_obj.password = split_message[2];
   medusa_instance.admin.auth.createSession(auth_obj).then(async (res) => {
+    console.log(res.user);
     const { data, error } = await db_user
       .from("users")
       .select("*")
@@ -65,6 +69,7 @@ bot.command("auth", (ctx) => {
   });
 });
 
+// logout command
 bot.command("logout", async (ctx) => {
   const { data, error } = await db_user
     .from("users")
@@ -79,7 +84,6 @@ bot.command("logout", async (ctx) => {
     axios
       .delete(`${medusa.baseUrl}/admin/auth`, axiosCfg)
       .then((res) => {
-        console.log(res);
         bot.telegram.sendMessage(
           ctx.chat.id,
           `You are now logged out as Admin`,
@@ -98,6 +102,47 @@ bot.command("logout", async (ctx) => {
     bot.telegram.sendMessage(
       ctx.chat.id,
       "Cannot Logout because you are not logged in",
+      {}
+    );
+  }
+});
+
+// get admin info command
+bot.command("admin", async (ctx) => {
+  const { data, error } = await db_user
+    .from("users")
+    .select("*")
+    .eq("user_id", ctx.from.id);
+  if (data.length > 0) {
+    let axiosCfg = {
+      headers: {
+        Cookie: `connect.sid=${data[0].cookie}`,
+      },
+    };
+    axios
+      .get(`${medusa.baseUrl}/admin/auth`, axiosCfg)
+      .then((res) => {
+        console.log(res.data.user);
+        bot.telegram.sendMessage(
+          ctx.chat.id,
+          `You are logged in as Admin ${
+            res.data.user.name ? res.data.user.name : ""
+          }`,
+          {}
+        );
+      })
+      .catch((err) => {
+        console.log(err);
+        bot.telegram.sendMessage(
+          ctx.chat.id,
+          `There was an error getting your admin info`,
+          {}
+        );
+      });
+  } else {
+    bot.telegram.sendMessage(
+      ctx.chat.id,
+      "Cannot get admin info because you are not logged in",
       {}
     );
   }
