@@ -93,7 +93,7 @@ bot.onText(/\/logout/, async (msg) => {
 });
 
 // user command
-bot.onText(/\/user/, async (msg) => {
+bot.onText(/\/info/, async (msg) => {
   const { data, error } = await db_user
     .from("users")
     .select("*")
@@ -107,11 +107,30 @@ bot.onText(/\/user/, async (msg) => {
     axios
       .get(`${medusa.baseUrl}/admin/auth`, axiosCfg)
       .then((res) => {
-        bot.sendMessage(msg.chat.id, JSON.stringify(res.data));
+        if (res.data.user) {
+          const user = res.data.user;
+          let unixCreatedAt = Date.parse(user.created_at);
+          let createdAt = new Date(unixCreatedAt);
+
+          bot.sendMessage(
+            msg.chat.id,
+            `<b>User_ID</b>: ${user.id}\n<b>First Name</b>: ${
+              user.first_name ? user.first_name : "undefined"
+            }\n<b>Last Name</b>: ${
+              user.last_name ? user.last_name : "undefined"
+            }\n<b>Email</b>: ${user.email}\n<b>Role</b>: ${
+              user.role
+            }\n<b>Created At (DD/MM/YYYY)</b>: ${createdAt.getDate()}/${createdAt.getMonth()}/${createdAt.getFullYear()}
+            `,
+            { parse_mode: "HTML" }
+          );
+        } else {
+          bot.sendMessage(msg.chat.id, "You are not logged in!");
+        }
       })
       .catch((err) => {
         console.log(err);
-        bot.sendMessage(msg.chat.id, "There was an error getting user info.");
+        bot.sendMessage(msg.chat.id, "You are not logged in!.");
       });
   } else {
     bot.sendMessage(msg.chat.id, "You are not logged in!");
