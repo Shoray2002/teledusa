@@ -196,7 +196,6 @@ bot.on("callback_query", function (msg) {
       bot.sendMessage(msg.from.id, "Managing Products: ", {
         reply_markup: JSON.stringify({
           inline_keyboard: [
-            [{ text: "Create a Product", callback_data: "create_product" }],
             [{ text: "Get a Product", callback_data: "get_product" }],
             [{ text: "List Products", callback_data: "list_products" }],
           ],
@@ -281,6 +280,16 @@ async function listCustomers(msg) {
             bot.sendMessage(msg.from.id, customersText, {
               parse_mode: "HTML",
               disable_web_page_preview: true,
+              reply_markup: JSON.stringify({
+                inline_keyboard: [
+                  [
+                    {
+                      text: "Get a Customer",
+                      callback_data: "get_customer",
+                    },
+                  ],
+                ],
+              }),
             });
           } else {
             customersText = "No customers found!";
@@ -309,7 +318,8 @@ async function getCustomer(msg) {
         Cookie: `connect.sid=${data[0].cookie}`,
       },
     };
-    bot.clearTextListeners();
+    bot.removeTextListener(/^prod/);
+    bot.removeTextListener(/^order/);
     bot.sendMessage(msg.from.id, "Please enter the customer ID");
     bot.onText(/^cus/, async (msg) => {
       axios
@@ -318,7 +328,13 @@ async function getCustomer(msg) {
           if (res.data.customer) {
             const customer = res.data.customer;
             curr_customer_id = customer.id;
-            let customerText = `<b>Customer Email</b>: ${customer.email}\n<b>Customer Name</b>: ${customer.first_name} ${customer.last_name}\n<b>Customer Phone</b>: ${customer.phone}\n<b>Has Account</b>: ${customer.has_account}\n`;
+            let customerText = `<b>Customer Email</b>: ${
+              customer.email
+            }\n<b>Customer Name</b>: ${customer.first_name} ${
+              customer.last_name
+            }\n<b>Customer Phone</b>: ${customer.phone}\n<b>Has Account</b>: ${
+              customer.has_account ? "👍" : "👎"
+            }\n`;
             let unixCreatedAt = Date.parse(customer.created_at);
             let createdAt = new Date(unixCreatedAt);
             customerText += `<b>Created At</b>: ${createdAt.getDate()}/${createdAt.getMonth()}/${createdAt.getFullYear()}`;
@@ -473,7 +489,8 @@ async function getProduct(msg) {
         Cookie: `connect.sid=${data[0].cookie}`,
       },
     };
-    bot.clearTextListeners();
+    bot.removeTextListener(/^cus/);
+    bot.removeTextListener(/^order/);
     bot.sendMessage(msg.from.id, "Please enter the product ID");
     bot.onText(/^prod/, async (msg) => {
       axios
@@ -534,6 +551,16 @@ async function listOrders(msg) {
             bot.sendMessage(msg.from.id, ordersText, {
               parse_mode: "HTML",
               disable_web_page_preview: true,
+              reply_markup: JSON.stringify({
+                inline_keyboard: [
+                  [
+                    {
+                      text: "Get an Order",
+                      callback_data: "get_order",
+                    },
+                  ],
+                ],
+              }),
             });
           } else {
             ordersText = "No orders found!";
@@ -562,7 +589,8 @@ async function getOrder(msg) {
         Cookie: `connect.sid=${data[0].cookie}`,
       },
     };
-    bot.clearTextListeners();
+    bot.removeTextListener(/^prod/);
+    bot.removeTextListener(/^cus/);
     bot.sendMessage(msg.from.id, "Please enter the order ID");
     bot.onText(/^order/, async (msg) => {
       axios
