@@ -5,6 +5,8 @@ import { createClient } from "@supabase/supabase-js";
 import axios from "axios";
 let curr_prod_id = "";
 let curr_order_id = "";
+let curr_customer_id = "";
+console.clear();
 const auth_obj = {
   email: "",
   password: "",
@@ -40,48 +42,59 @@ bot.onText(/\/auth/, (msg) => {
   const split_message = msg.text.split(" ");
   auth_obj.email = "admin@medusa-test.com";
   auth_obj.password = "supersecret";
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(auth_obj.email)) {
-    medusa_instance.admin.auth.createSession(auth_obj).then(async (res) => {
-      const { data, error } = await db_user
-        .from("users")
-        .select("*")
-        .eq("user_id", msg.from.id);
-
-      if (data.length > 0) {
-        console.log("User already exists");
-        await db_user
+  if (!auth_obj.email.length || !auth_obj.password.length) {
+    bot.sendMessage(
+      msg.from.id,
+      "Please enter your email and password in the format /auth <email> <password>"
+    );
+  } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(auth_obj.email)) {
+    medusa_instance.admin.auth
+      .createSession(auth_obj)
+      .then(async (res) => {
+        const { data, error } = await db_user
           .from("users")
-          .update({
-            cookie: res.response.headers["set-cookie"][0]
-              .split(";")[0]
-              .split("connect.sid=")[1],
-          })
+          .select("*")
           .eq("user_id", msg.from.id);
-      } else {
-        console.log("Creating new user");
-        await db_user.from("users").insert([
-          {
-            user_id: msg.from.id,
-            cookie: res.response.headers["set-cookie"][0]
-              .split(";")[0]
-              .split("connect.sid=")[1],
-          },
-        ]);
-      }
-      bot.sendMessage(
-        msg.chat.id,
-        `You have been authenticated as ${res.user.id}\nChoose an option to manage: `,
-        {
-          reply_markup: JSON.stringify({
-            inline_keyboard: [
-              [{ text: "Products", callback_data: "products" }],
-              [{ text: "Orders", callback_data: "orders" }],
-              [{ text: "Users", callback_data: "users" }],
-            ],
-          }),
+
+        if (data.length > 0) {
+          console.log("User already exists");
+          await db_user
+            .from("users")
+            .update({
+              cookie: res.response.headers["set-cookie"][0]
+                .split(";")[0]
+                .split("connect.sid=")[1],
+            })
+            .eq("user_id", msg.from.id);
+        } else {
+          console.log("Creating new user");
+          await db_user.from("users").insert([
+            {
+              user_id: msg.from.id,
+              cookie: res.response.headers["set-cookie"][0]
+                .split(";")[0]
+                .split("connect.sid=")[1],
+            },
+          ]);
         }
-      );
-    });
+        bot.sendMessage(
+          msg.chat.id,
+          `You have been authenticated as ${res.user.id}\nChoose an option to manage: `,
+          {
+            reply_markup: JSON.stringify({
+              inline_keyboard: [
+                [{ text: "Products", callback_data: "products" }],
+                [{ text: "Orders", callback_data: "orders" }],
+                [{ text: "Customers", callback_data: "customers" }],
+              ],
+            }),
+          }
+        );
+      })
+      .catch((err) => {
+        console.log(err);
+        bot.sendMessage(msg.chat.id, "Invalid credentials");
+      });
   } else {
     bot.sendMessage(msg.chat.id, `Please enter a valid email address`);
   }
@@ -185,8 +198,15 @@ bot.on("callback_query", function (msg) {
         }),
       });
       break;
-    case "users":
-      bot.sendMessage(msg.from.id, "Users");
+    case "customers":
+      bot.sendMessage(msg.from.id, "Managing Customers: ", {
+        reply_markup: JSON.stringify({
+          inline_keyboard: [
+            [{ text: "Get a Customer", callback_data: "get_customer" }],
+            [{ text: "List Customers", callback_data: "list_customers" }],
+          ],
+        }),
+      });
       break;
 
     case "list_products":
@@ -205,10 +225,20 @@ bot.on("callback_query", function (msg) {
     case "get_order":
       getOrder(msg);
       break;
+
+    case "list_customers":
+      listCustomers(msg);
+      break;
+    case "get_customer":
+      getCustomer(msg);
+      break;
+
+    default:
+      bot.sendMessage(msg.from.id, "Invalid option");
   }
 });
-// Product Functions
 
+// Product Functions
 // list products
 async function listProducts(msg) {
   const { data, error } = await db_user
@@ -350,7 +380,6 @@ async function getProduct(msg) {
 }
 
 // Order Functions
-
 // list orders
 async function listOrders(msg) {
   const { data, error } = await db_user
@@ -371,7 +400,6 @@ async function listOrders(msg) {
           let ordersText = "";
           const count = res.data.orders.length;
           if (count) {
-            console.log(count);
             const orders = res.data.orders;
             orders.forEach((order) => {
               console.log(order);
@@ -382,16 +410,6 @@ async function listOrders(msg) {
             bot.sendMessage(msg.from.id, ordersText, {
               parse_mode: "HTML",
               disable_web_page_preview: true,
-              reply_markup: JSON.stringify({
-                inline_keyboard: [
-                  [
-                    {
-                      text: "Get an Order",
-                      callback_data: "get_order",
-                    },
-                  ],
-                ],
-              }),
             });
           } else {
             ordersText = "No orders found!";
@@ -474,4 +492,112 @@ async function getOrder(msg) {
   }
 }
 
+// Customer Functions
+// list customers
+async function listCustomers(msg) {
+  const { data, error } = await db_user
+    .from("users")
+    .select("*")
+    .eq("user_id", msg.from.id);
+  if (data.length > 0) {
+    let axiosCfg = {
+      headers: {
+        Cookie: `connect.sid=${data[0].cookie}`,
+      },
+    };
+    axios
+      .get(`${medusa.baseUrl}/admin/customers`, axiosCfg)
+      .then((res) => {
+        if (res.data.customers) {
+          // count customers
+          let customersText = "";
+          const count = res.data.customers.length;
+          if (count) {
+            const customers = res.data.customers;
+            customers.forEach((customer) => {
+              customersText += `<b>Customer ID</b>: ${customer.id}\n<b>Customer Email</b>: ${customer.email}\n\n`;
+            });
+            bot.sendMessage(msg.from.id, customersText, {
+              parse_mode: "HTML",
+              disable_web_page_preview: true,
+            });
+          } else {
+            customersText = "No customers found!";
+            bot.sendMessage(msg.from.id, customersText);
+          }
+        }
+      })
+      .catch((err) => {
+        console.log(err);
+        bot.sendMessage(msg.from.id, "You are not logged in!");
+      });
+  } else {
+    bot.sendMessage(msg.from.id, "You are not logged in!");
+  }
+}
 
+// get customer
+async function getCustomer(msg) {
+  const { data, error } = await db_user
+    .from("users")
+    .select("*")
+    .eq("user_id", msg.from.id);
+  if (data.length > 0) {
+    let axiosCfg = {
+      headers: {
+        Cookie: `connect.sid=${data[0].cookie}`,
+      },
+    };
+    bot.sendMessage(msg.from.id, "Please enter the customer ID");
+    bot.on("message", async (msg) => {
+      axios
+        .get(`${medusa.baseUrl}/admin/customers/${msg.text}`, axiosCfg)
+        .then((res) => {
+          if (res.data.customer) {
+            const customer = res.data.customer;
+            curr_customer_id = customer.id;
+            console.log(customer);
+            let customerText = `<b>Customer Email</b>: ${customer.email}\n<b>Customer Name</b>: ${customer.first_name} ${customer.last_name}\n<b>Customer Phone</b>: ${customer.phone}\n<b>Has Account</b>: ${customer.has_account}\n`;
+            let unixCreatedAt = Date.parse(customer.created_at);
+            let createdAt = new Date(unixCreatedAt);
+            customerText += `<b>Created At</b>: ${createdAt.getDate()}/${createdAt.getMonth()}/${createdAt.getFullYear()}`;
+            let ordersString = "\n<b>Orders</b>:\n\n";
+            if (customer.orders.length) {
+              customer.orders.forEach((order) => {
+                ordersString += `<b>Order ID</b>: ${order.id}\n<b>Order Status</b>: ${order.status}\n\n`;
+              });
+            } else {
+              ordersString = "\nNo orders found for this customer!";
+            }
+            customerText += ordersString;
+
+            bot.sendMessage(msg.from.id, customerText, {
+              parse_mode: "HTML",
+              reply_markup: JSON.stringify({
+                inline_keyboard: [
+                  [
+                    {
+                      text: "Update Customer",
+                      callback_data: "update_customer",
+                    },
+                  ],
+                  [
+                    {
+                      text: "Delete Customer",
+                      callback_data: "delete_customer",
+                    },
+                  ],
+                ],
+              }),
+            });
+          }
+        })
+        .catch((err) => {
+          console.log(err);
+          bot.sendMessage(msg.from.id, "Invalid Customer Id!");
+        });
+    });
+  } else {
+    bot.sendMessage(msg.from.id, "You are not logged in!");
+  }
+}
