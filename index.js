@@ -116,12 +116,10 @@ bot.onText(/\/logout/, async (msg) => {
       .delete(`${medusa.baseUrl}/admin/auth`, axiosCfg)
       .then((res) => {
         bot.sendMessage(msg.chat.id, `You have been logged out!`);
-        // stop bot
-        bot.stopPolling();
       })
       .catch((err) => {
         console.log(err);
-        bot.sendMessage(msg.chat.id, "There was an error logging you out.");
+        bot.sendMessage(msg.chat.id, "You are not logged in!");
       });
   } else {
     bot.sendMessage(msg.chat.id, "You are not logged in!");
@@ -232,12 +230,14 @@ bot.on("callback_query", function (msg) {
     case "get_product":
       getProduct(msg);
       break;
-
     case "list_orders":
       listOrders(msg);
       break;
     case "get_order":
       getOrder(msg);
+      break;
+    case "complete_order":
+      completeOrder(msg);
       break;
 
     case "list_customers":
@@ -354,14 +354,8 @@ async function getCustomer(msg) {
                 inline_keyboard: [
                   [
                     {
-                      text: "Update Customer",
-                      callback_data: "update_customer",
-                    },
-                  ],
-                  [
-                    {
-                      text: "Delete Customer",
-                      callback_data: "delete_customer",
+                      text: "Get an Order",
+                      callback_data: "get_order",
                     },
                   ],
                 ],
@@ -504,9 +498,12 @@ async function getProduct(msg) {
               parse_mode: "HTML",
               reply_markup: JSON.stringify({
                 inline_keyboard: [
-                  [{ text: "Update Product", callback_data: "update_product" }],
-                  [{ text: "Delete Product", callback_data: "delete_product" }],
-                  [{ text: "List Variants", callback_data: "list_variants" }],
+                  [
+                    {
+                      text: "List Variants of this Product",
+                      callback_data: "list_variants",
+                    },
+                  ],
                 ],
               }),
             });
@@ -619,17 +616,29 @@ async function getOrder(msg) {
                 item.quantity
               } - ${
                 item.unit_price / 100
-              } ${order.currency_code.toUpperCase()}\n`;
+              } ${order.currency_code.toUpperCase()} - <em>${
+                item.variant_id
+              }</em>\n`;
             });
             let unixCreatedAt = Date.parse(order.created_at);
             let createdAt = new Date(unixCreatedAt);
-            orderText += `<b>Creatd At</b>: ${createdAt.getDate()}/${createdAt.getMonth()}/${createdAt.getFullYear()}`;
+            orderText += `<b>Created At</b>: ${createdAt.getDate()}/${createdAt.getMonth()}/${createdAt.getFullYear()}`;
             bot.sendMessage(msg.from.id, orderText, {
               parse_mode: "HTML",
               reply_markup: JSON.stringify({
                 inline_keyboard: [
-                  [{ text: "Update Order", callback_data: "update_order" }],
-                  [{ text: "Delete Order", callback_data: "delete_order" }],
+                  [
+                    {
+                      text: "Get a Variant",
+                      callback_data: "get_variant",
+                    },
+                  ],
+                  [
+                    {
+                      text: "Complete this Order",
+                      callback_data: "complete_order",
+                    },
+                  ],
                 ],
               }),
             });
@@ -640,6 +649,68 @@ async function getOrder(msg) {
           bot.sendMessage(msg.from.id, "Invalid Order Id!");
         });
     });
+  } else {
+    bot.sendMessage(msg.from.id, "You are not logged in!");
+  }
+}
+
+// complete order
+async function completeOrder(msg) {
+  const { data, error } = await db_user
+    .from("users")
+    .select("*")
+    .eq("user_id", msg.from.id);
+  if (data.length > 0) {
+    let axiosCfg = {
+      headers: {
+        Cookie: `connect.sid=${data[0].cookie}`,
+      },
+    };
+    axios
+      .post(
+        `${medusa.baseUrl}/admin/orders/${curr_order_id}/complete`,
+        {},
+        axiosCfg
+      )
+      .then((res) => {
+        const order = res;
+        let orderText = `<b>Customer Email</b>: ${
+          order.email
+        }\n<b>Payment Status</b>: ${
+          order.payment_status
+        }\n<b>Shipping Status</b>: ${order.status}\n<b>Total</b>: ${
+          order.total / 100
+        } ${order.currency_code.toUpperCase()}\n<b>Items</b>: \n`;
+        order.items.forEach((item) => {
+          orderText += `${item.title} - ${item.variant.title} - ${
+            item.quantity
+          } - ${
+            item.unit_price / 100
+          } ${order.currency_code.toUpperCase()} - <em>${
+            item.variant_id
+          }</em>\n`;
+        });
+        bot.sendMessage(msg.from.id, orderText, {
+          parse_mode: "HTML",
+          reply_markup: JSON.stringify({
+            inline_keyboard: [
+              [
+                {
+                  text: "Get a Variant",
+                  callback_data: "get_variant",
+                },
+              ],
+            ],
+          }),
+        });
+      })
+      .catch((err) => {
+        console.log(err);
+        bot.sendMessage(
+          msg.from.id,
+          "There was an error completing the order!"
+        );
+      });
   } else {
     bot.sendMessage(msg.from.id, "You are not logged in!");
   }
