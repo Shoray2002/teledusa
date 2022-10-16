@@ -309,8 +309,9 @@ async function getCustomer(msg) {
         Cookie: `connect.sid=${data[0].cookie}`,
       },
     };
+    bot.clearTextListeners();
     bot.sendMessage(msg.from.id, "Please enter the customer ID");
-    bot.on("message", async (msg) => {
+    bot.onText(/^cus/, async (msg) => {
       axios
         .get(`${medusa.baseUrl}/admin/customers/${msg.text}`, axiosCfg)
         .then((res) => {
@@ -472,8 +473,9 @@ async function getProduct(msg) {
         Cookie: `connect.sid=${data[0].cookie}`,
       },
     };
+    bot.clearTextListeners();
     bot.sendMessage(msg.from.id, "Please enter the product ID");
-    bot.on("message", async (msg) => {
+    bot.onText(/^prod/, async (msg) => {
       axios
         .get(`${medusa.baseUrl}/admin/products/${msg.text}`, axiosCfg)
         .then((res) => {
@@ -560,8 +562,9 @@ async function getOrder(msg) {
         Cookie: `connect.sid=${data[0].cookie}`,
       },
     };
+    bot.clearTextListeners();
     bot.sendMessage(msg.from.id, "Please enter the order ID");
-    bot.on("message", async (msg) => {
+    bot.onText(/^order/, async (msg) => {
       axios
         .get(`${medusa.baseUrl}/admin/orders/${msg.text}`, axiosCfg)
         .then((res) => {
