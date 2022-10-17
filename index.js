@@ -38,7 +38,10 @@ bot.onText(/\/help/, (msg) => {
     parse_mode: "HTML",
     disable_web_page_preview: true,
   });
-  bot.sendPhoto(msg.chat.id, "https://www.somesite.com/image.jpg");
+  bot.sendPhoto(
+    msg.chat.id,
+    "https://i.ibb.co/3znyp5B/Screenshot-20221017-162035.png"
+  );
 });
 
 // auth command
