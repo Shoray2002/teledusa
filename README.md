@@ -34,19 +34,25 @@ Before you start with the tutorial make sure you have
 git clone https://github.com/Shoray2002/teledusa.git
 ```
 
-2. Configuration:
-Change the configuration to your liking.
-
-3. Create a MySQL table with: 
-* column called discord of type BIGINT
-* column called cookie of type TEXT
-
-3. Change directory and install dependencies:
+2. Change directory and install dependencies:
 
 ```bash
 cd teledusa
 npm install
 ```
+3. Setup .env file:
+ ```bash
+cp .env.template .env
+```
+
+4. Configure the .env: 
+* A new Telegram Bot TOKEN using [BotFather](https://core.telegram.org/bots/features#botfather)
+* Configure a new Supabase Project to manage Cookies using [New Project on Supabase](https://egghead.io/lessons/supabase-create-a-new-supabase-project).
+  Create a new table called **users** with the following schema
+  ![image](https://user-images.githubusercontent.com/76423272/196204425-709c2e4a-8d8c-473f-b97a-2695439b6cca.png)
+
+* New Medusa server configurations [Install a medusa server](https://docs.medusajs.com/quickstart/quick-start#create-a-medusa-server)
+
 5.  Start the server
 ```
 npm index.js
