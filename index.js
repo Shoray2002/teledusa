@@ -12,7 +12,7 @@ const auth_obj = {
   password: "",
 };
 
-const help_text = `Welcome to the Teledusa Bot! Here are the commands you can use:\n\n<b>/auth</b> - Authorize your Medusa Admin Account by passing your Email and Password inline \n<b>/options</b> - View Managing Options\n<b>/info</b> - Get info about your logged admin account\n<b>/logout</b> - Logout from your Admin Account\n<b>/help</b> - Show this message\n\nHere is a reference to the available operations:\n\n`;
+const help_text = `Welcome to the Teledusa Bot! Here are the commands you can use:\n\n<b>/auth</b> - Authorize your Medusa Admin Account by passing your Email and Password inline \n<b>/options</b> - View Managing Options\n<b>/info</b> - Get info about your logged admin account\n<b>/logout</b> - Logout from your Admin Account\n<b>/help</b> - Show this message\n\n`;
 const db_user = createClient(supabase.url, supabase.key);
 
 const medusa_instance = new Medusa.default({
@@ -36,11 +36,13 @@ bot.onText(/\/start/, (msg) => {
 bot.onText(/\/help/, (msg) => {
   bot.sendMessage(msg.from.id, help_text, {
     parse_mode: "HTML",
-    disable_web_page_preview: true,
   });
   bot.sendPhoto(
     msg.chat.id,
-    "https://i.ibb.co/3znyp5B/Screenshot-20221017-162035.png"
+    "https://i.ibb.co/3znyp5B/Screenshot-20221017-162035.png",
+    {
+      caption: "Here is a reference to the available operations",
+    }
   );
 });
 
@@ -195,7 +197,17 @@ bot.onText(/\/options/, async (msg) => {
 bot.on("callback_query", function (msg) {
   switch (msg.data) {
     case "help":
-      bot.sendMessage(msg.from.id, "Help");
+      bot.sendMessage(msg.from.id, help_text, {
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      });
+      bot.sendPhoto(
+        msg.from.id,
+        "https://i.ibb.co/3znyp5B/Screenshot-20221017-162035.png",
+        {
+          caption: "Here is a reference to the available operations",
+        }
+      );
       break;
     case "products":
       bot.sendMessage(msg.from.id, "Managing Products: ", {

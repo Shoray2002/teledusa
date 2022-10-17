@@ -12,7 +12,7 @@ Shoray Singhal - @ShoraySinghal
 
 
 ### Operation Reference
-![Untitled Diagram drawio](https://user-images.githubusercontent.com/76423272/196162995-2581dbe3-76f8-4487-8ab1-4fca13518e16.svg)
+![Operation Reference](https://user-images.githubusercontent.com/76423272/196162995-2581dbe3-76f8-4487-8ab1-4fca13518e16.svg)
 
 
 ## Set up Project
