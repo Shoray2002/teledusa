@@ -7,7 +7,7 @@
 Shoray Singhal - @ShoraySinghal
 
 ### Description
-Teledusa is a Telegram Bot that allows owners and admins to manage their Medusa Stores made by integrating Medusa.js with Node-telegram-bot-api.
+Teledusa is a Telegram Bot that allows owners and admins to manage their Medusa Stores using an intuitive interface made by integrating Medusa.js with Node-telegram-bot-api.
 
 ### Preview
 https://user-images.githubusercontent.com/76423272/196190369-c3ae7b74-1b4f-40e8-bfb0-8885c81f5d58.mp4
