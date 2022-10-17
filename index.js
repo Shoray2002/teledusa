@@ -11,6 +11,8 @@ const auth_obj = {
   email: "",
   password: "",
 };
+
+const help_text = `Welcome to the Teledusa Bot! Here are the commands you can use:\n\n<b>/auth</b> - Authorize your Medusa Admin Account by passing your Email and Password inline \n<b>/options</b> - View Managing Options\n<b>/info</b> - Get info about your logged admin account\n<b>/logout</b> - Logout from your Admin Account\n<b>/help</b> - Show this message\n\nHere is a reference to the available operations:\n\n`;
 const db_user = createClient(supabase.url, supabase.key);
 
 const medusa_instance = new Medusa.default({
@@ -32,20 +34,22 @@ bot.onText(/\/start/, (msg) => {
 
 // help command
 bot.onText(/\/help/, (msg) => {
-  if (msg.data == "help") {
-    bot.sendMessage(msg.from.id, "Help");
-  }
+  bot.sendMessage(msg.from.id, help_text, {
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  });
+  bot.sendPhoto(msg.chat.id, "https://www.somesite.com/image.jpg");
 });
 
 // auth command
 bot.onText(/\/auth/, (msg) => {
   const split_message = msg.text.split(" ");
-  auth_obj.email = "admin@medusa-test.com";
-  auth_obj.password = "supersecret";
-  if (!auth_obj.email.length || !auth_obj.password.length) {
+  auth_obj.email = split_message[1];
+  auth_obj.password = split_message[2];
+  if (!auth_obj.email || !auth_obj.password) {
     bot.sendMessage(
       msg.from.id,
-      "Please enter your email and password in the format /auth <email> <password>"
+      "Please enter your credentials in the format /auth <email> <password>"
     );
   } else if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(auth_obj.email)) {
     medusa_instance.admin.auth
