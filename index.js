@@ -39,7 +39,7 @@ bot.onText(/\/help/, (msg) => {
   });
   bot.sendPhoto(
     msg.chat.id,
-    "https://i.ibb.co/3znyp5B/Screenshot-20221017-162035.png",
+    "https://i.ibb.co/MN52hqQ/Screenshot-20221017-185412.png",
     {
       caption: "Here is a reference to the available operations",
     }
@@ -203,7 +203,7 @@ bot.on("callback_query", function (msg) {
       });
       bot.sendPhoto(
         msg.from.id,
-        "https://i.ibb.co/3znyp5B/Screenshot-20221017-162035.png",
+        "https://i.ibb.co/MN52hqQ/Screenshot-20221017-185412.png",
         {
           caption: "Here is a reference to the available operations",
         }
