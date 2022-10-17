@@ -1,26 +1,30 @@
 import TelegramBot from "node-telegram-bot-api";
 import Medusa from "@medusajs/medusa-js";
-import { telegram, medusa, supabase } from "./config.js";
+import * as dotenv from "dotenv";
+dotenv.config();
 import { createClient } from "@supabase/supabase-js";
 import axios from "axios";
 let curr_prod_id = "";
 let curr_order_id = "";
 let curr_customer_id = "";
-console.clear();
+let baseURL = process.env.MEDUSA_BASE_URL;
 const auth_obj = {
   email: "",
   password: "",
 };
 
 const help_text = `Welcome to the Teledusa Bot! Here are the commands you can use:\n\n<b>/auth</b> - Authorize your Medusa Admin Account by passing your Email and Password inline \n<b>/options</b> - View Managing Options\n<b>/info</b> - Get info about your logged admin account\n<b>/logout</b> - Logout from your Admin Account\n<b>/help</b> - Show this message\n\n`;
-const db_user = createClient(supabase.url, supabase.key);
+const db_user = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 const medusa_instance = new Medusa.default({
-  baseUrl: medusa.baseUrl,
-  maxRetries: medusa.maxRetries,
+  baseUrl: baseURL,
+  maxRetries: process.env.MEDUSA_MAXRETRIES || 3,
 });
 
-const bot = new TelegramBot(telegram.token, { polling: true });
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: true });
 
 // start command
 bot.onText(/\/start/, (msg) => {
@@ -122,7 +126,7 @@ bot.onText(/\/logout/, async (msg) => {
       },
     };
     axios
-      .delete(`${medusa.baseUrl}/admin/auth`, axiosCfg)
+      .delete(`${baseURL}/admin/auth`, axiosCfg)
       .then((res) => {
         bot.sendMessage(msg.chat.id, `You have been logged out!`);
       })
@@ -148,7 +152,7 @@ bot.onText(/\/info/, async (msg) => {
       },
     };
     axios
-      .get(`${medusa.baseUrl}/admin/auth`, axiosCfg)
+      .get(`${baseURL}/admin/auth`, axiosCfg)
       .then((res) => {
         if (res.data.user) {
           const user = res.data.user;
@@ -286,7 +290,7 @@ async function listCustomers(msg) {
       },
     };
     axios
-      .get(`${medusa.baseUrl}/admin/customers`, axiosCfg)
+      .get(`${baseURL}/admin/customers`, axiosCfg)
       .then((res) => {
         if (res.data.customers) {
           // count customers
@@ -343,7 +347,7 @@ async function getCustomer(msg) {
     bot.sendMessage(msg.from.id, "Please enter the customer ID");
     bot.onText(/^cus/, async (msg) => {
       axios
-        .get(`${medusa.baseUrl}/admin/customers/${msg.text}`, axiosCfg)
+        .get(`${baseURL}/admin/customers/${msg.text}`, axiosCfg)
         .then((res) => {
           if (res.data.customer) {
             const customer = res.data.customer;
@@ -407,7 +411,7 @@ async function listProducts(msg) {
       },
     };
     axios
-      .get(`${medusa.baseUrl}/admin/products`, axiosCfg)
+      .get(`${baseURL}/admin/products`, axiosCfg)
       .then((res) => {
         if (res.data.products) {
           const products = res.data.products;
@@ -455,10 +459,7 @@ async function listVariants(msg) {
       },
     };
     axios
-      .get(
-        `${medusa.baseUrl}/admin/products/${curr_prod_id}/variants`,
-        axiosCfg
-      )
+      .get(`${baseURL}/admin/products/${curr_prod_id}/variants`, axiosCfg)
       .then((res) => {
         if (res.data.variants) {
           const variants = res.data.variants;
@@ -498,7 +499,7 @@ async function getProduct(msg) {
     bot.sendMessage(msg.from.id, "Please enter the product ID");
     bot.onText(/^prod/, async (msg) => {
       axios
-        .get(`${medusa.baseUrl}/admin/products/${msg.text}`, axiosCfg)
+        .get(`${baseURL}/admin/products/${msg.text}`, axiosCfg)
         .then((res) => {
           if (res.data.product) {
             const product = res.data.product;
@@ -543,7 +544,7 @@ async function listOrders(msg) {
       },
     };
     axios
-      .get(`${medusa.baseUrl}/admin/orders`, axiosCfg)
+      .get(`${baseURL}/admin/orders`, axiosCfg)
       .then((res) => {
         if (res.data.orders) {
           // count orders
@@ -601,7 +602,7 @@ async function getOrder(msg) {
     bot.sendMessage(msg.from.id, "Please enter the order ID");
     bot.onText(/^order/, async (msg) => {
       axios
-        .get(`${medusa.baseUrl}/admin/orders/${msg.text}`, axiosCfg)
+        .get(`${baseURL}/admin/orders/${msg.text}`, axiosCfg)
         .then((res) => {
           if (res.data.order) {
             const order = res.data.order;
@@ -671,11 +672,7 @@ async function completeOrder(msg) {
       },
     };
     axios
-      .post(
-        `${medusa.baseUrl}/admin/orders/${curr_order_id}/complete`,
-        {},
-        axiosCfg
-      )
+      .post(`${baseURL}/admin/orders/${curr_order_id}/complete`, {}, axiosCfg)
       .then((res) => {
         const order = res;
         let orderText = `<b>Customer Email</b>: ${
