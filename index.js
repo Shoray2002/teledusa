@@ -233,6 +233,7 @@ bot.on("callback_query", function (msg) {
     case "list_orders":
       listOrders(msg);
       break;
+
     case "get_order":
       getOrder(msg);
       break;
@@ -449,16 +450,6 @@ async function listVariants(msg) {
           bot.sendMessage(msg.from.id, variantsText, {
             parse_mode: "HTML",
             disable_web_page_preview: true,
-            reply_markup: JSON.stringify({
-              inline_keyboard: [
-                [
-                  {
-                    text: "Get a Variant",
-                    callback_data: "get_variant",
-                  },
-                ],
-              ],
-            }),
           });
         }
       })
@@ -629,12 +620,6 @@ async function getOrder(msg) {
                 inline_keyboard: [
                   [
                     {
-                      text: "Get a Variant",
-                      callback_data: "get_variant",
-                    },
-                  ],
-                  [
-                    {
                       text: "Complete this Order",
                       callback_data: "complete_order",
                     },
@@ -692,16 +677,6 @@ async function completeOrder(msg) {
         });
         bot.sendMessage(msg.from.id, orderText, {
           parse_mode: "HTML",
-          reply_markup: JSON.stringify({
-            inline_keyboard: [
-              [
-                {
-                  text: "Get a Variant",
-                  callback_data: "get_variant",
-                },
-              ],
-            ],
-          }),
         });
       })
       .catch((err) => {
