@@ -34,13 +34,20 @@ Before you start with the tutorial make sure you have
 git clone https://github.com/Shoray2002/teledusa.git
 ```
 
-2. Change directory and install dependencies:
+2. Configuration:
+Change the configuration to your liking.
+
+3. Create a MySQL table with: 
+* column called discord of type BIGINT
+* column called cookie of type TEXT
+
+3. Change directory and install dependencies:
 
 ```bash
 cd teledusa
 npm install
 ```
-4.  Start the server
+5.  Start the server
 ```
 npm index.js
 ```
@@ -49,6 +56,6 @@ npm index.js
 - [Medusa’s GitHub repository](https://github.com/medusajs/medusa)
 - [Medusa Admin Panel](https://github.com/medusajs/admin)
 - [Medusa Documentation](https://docs.medusajs.com/)
-- [Medusa Admin API Refrence](https://docs.medusajs.com/api/admin/)
+- [Medusa Admin API Reference](https://docs.medusajs.com/api/admin/)
 - [Node-telegram-bot-api’s GitHub repository](https://github.com/yagop/node-telegram-bot-api)
 - [Telegram Bot API reference](https://core.telegram.org/bots/api)
